@@ -93,7 +93,7 @@
                 const data = await response.json();
                 console.log('Response data:', data);
                 
-                // Display results
+                
                 if (data.states) {
                     displayResults(data.states);
                 } else {
@@ -127,7 +127,7 @@
                 const stateClass = state.state.toLowerCase();
                 html += `
                     <div class="result-item ${stateClass}">
-                        <div class="result-state ${state.state}">State: ${state.state}</div>
+                        <div class="result-state ${state.state}">${state.state}</div>
                         ${state.witness ? `
                             <div style="margin-top: 8px; font-weight: 600; color: #a8b2d1; font-size: 14px;">Witness</div>
                             <div class="result-witness">${escapeHtml(state.witness)}</div>
