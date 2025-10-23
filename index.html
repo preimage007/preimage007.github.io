@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>preimage007</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <body>
+    <div class="container">
+        <div class="form-group">
+            <label for="mintUrl">Mint URL</label>
+            <input 
+                type="text" 
+                id="mintUrl" 
+                value="https://mint.cubabitcoin.org"
+            >
+
+        </div>
+
+        <div class="form-group">
+            <label for="yValues">Y Values (one per line)</label>
+            <textarea 
+                id="yValues" 
+            >02e19e9dfaca28914b1e0e1810e7573dab7241340d52ba9b4948e5ceff6c8b9571</textarea>
+            <div class="hint">Enter Y values separated by new lines</div>
+        </div>
+
+        <button onclick="checkTokenState()" id="checkBtn">Check Token State</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        console.log('Script loaded!');
+
+        async function checkTokenState() {
+            console.log('checkTokenState function called!');
+            
+            const resultsDiv = document.getElementById('results');
+            const checkBtn = document.getElementById('checkBtn');
+            
+            try {
+                checkBtn.disabled = true;
+                checkBtn.textContent = 'Checking...';
+                
+                const mintUrl = document.getElementById('mintUrl').value.trim();
+                const yValuesText = document.getElementById('yValues').value.trim();
+                
+                resultsDiv.innerHTML = '<div class="debug">Starting check...\nMint URL: ' + mintUrl + '\nY Values: ' + yValuesText + '</div>';
+                
+                const yValues = yValuesText.split('\n')
+                    .map(y => y.trim())
+                    .filter(y => y.length > 0);
+                
+                if (yValues.length === 0) {
+                    resultsDiv.innerHTML = '<div class="error">⚠️ Please enter at least one Y value</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                `;
+
+                const apiUrl = `${mintUrl.replace(/\/$/, '')}/v1/checkstate`;
+                
+                console.log('Making request to:', apiUrl);
+                console.log('Payload:', { Ys: yValues });
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        Ys: yValues
+                    }),
+                    mode: 'cors'
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                // Display results
+                if (data.states) {
+                    displayResults(data.states);
+                } else {
+                    resultsDiv.innerHTML = '<div class="error">⚠️ Invalid response format from mint</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                let errorMsg = error.message;
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMsg = `Network Error: Unable to connect to the mint.<br><br> ${error.message}`;
+                }
+                resultsDiv.innerHTML = `<div class="error">⚠️ ${errorMsg}</div>`;
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.textContent = 'Check Token State';
+            }
+        }
+
+        function displayResults(states) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!states || states.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">⚠️ No results returned from mint</div>';
+                return;
+            }
+
+            let html = '<div class="results">';
+            
+            states.forEach(state => {
+                const stateClass = state.state.toLowerCase();
+                html += `
+                    <div class="result-item ${stateClass}">
+                        <div class="result-state ${state.state}">State: ${state.state}</div>
+                        ${state.witness ? `
+                            <div style="margin-top: 8px; font-weight: 600; color: #a8b2d1; font-size: 14px;">Witness</div>
+                            <div class="result-witness">${escapeHtml(state.witness)}</div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        window.addEventListener('load', function() {
+            console.log('Page fully loaded');
+            console.log('Button element:', document.getElementById('checkBtn'));
+        });
+    </script>
+</body>
+    
+  </body>
+  
+</html>
